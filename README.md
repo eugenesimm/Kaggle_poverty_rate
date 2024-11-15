@@ -18,5 +18,6 @@
 - data/clean 안에 있는 트레이닝 데이터셋: 
   - column 이름들 정리했음, 
   - NA rate 높은 애들 버리고,
-  - 서로 correlation 높은 애들중 한개 남기고 버림
+  - binary response => 1과0으로 바꿈
+  - 서로 correlation 높은 애들중 한개 남기고 버림 (이 단계 아직 해야됨)
   - EDA 할때 얘네로 하는것 권장

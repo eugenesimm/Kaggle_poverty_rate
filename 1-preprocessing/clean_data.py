@@ -44,7 +44,17 @@ def clean_HouseholdInfo(output_filename="train_HouseholdInfo_clean.csv"):
     HouseholdInfo['psu_hh_idcode'] = HouseholdInfo['psu'].astype(str) + '_' + HouseholdInfo['hh'].astype(str) + '_' + HouseholdInfo['idcode'].astype(str)
     HouseholdInfo = HouseholdInfo[['psu_hh_idcode'] + [col for col in HouseholdInfo.columns if col != 'psu_hh_idcode']]
     HouseholdInfo.drop(columns=['psu', 'idcode', 'hh'], inplace=True)
+    
+    # Non-response rate
+    na_counts = HouseholdInfo.isna().sum()
+    nrow = len(HouseholdInfo)
+    na_rate = na_counts / nrow * 100
+    na_rate = na_rate.sort_values(ascending=False)
+    cols_to_drop = na_rate[na_rate > 0.9]
+    HouseholdInfo.drop(columns=cols_to_drop.index, inplace=True)
+    #print("Removed columns: {list(cols_to_drop)} from HouseholdInfo")
 
+    # Filter out columns with high auto-correlations
 
     # output dataframe to clean csv file
     HouseholdInfo.to_csv(os.path.join(CLEAN_DATA_DIR, "train_HouseholdInfo_clean.csv"))
@@ -69,4 +79,3 @@ if __name__ == '__main__':
     clean_Education()
     clean_HouseholdInfo()
     clean_SubjectivePoverty()
-    
