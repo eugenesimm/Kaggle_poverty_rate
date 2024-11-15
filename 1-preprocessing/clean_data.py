@@ -5,7 +5,7 @@ import os
 RAW_DATA_DIR = "../data/raw/"
 CLEAN_DATA_DIR = "../data/clean/"
 
-def clean_Education():
+def clean_Education(output_filename="train_Education_clean.csv"):
     '''
     Initially, train_Education.csv comes in the format:
         psu,hh,idcode,q01,q02, ...,Q65,Q66
@@ -33,10 +33,10 @@ def clean_Education():
     
 
     # output dataframe to clean csv file
-    Education.to_csv(os.path.join(CLEAN_DATA_DIR, "train_Education_clean.csv"))
+    Education.to_csv(os.path.join(CLEAN_DATA_DIR, output_filename))
 
 
-def clean_HouseholdInfo():
+def clean_HouseholdInfo(output_filename="train_HouseholdInfo_clean.csv"):
     '''
     clean_HousesholdInfo()
     '''
@@ -50,19 +50,23 @@ def clean_HouseholdInfo():
     HouseholdInfo.to_csv(os.path.join(CLEAN_DATA_DIR, "train_HouseholdInfo_clean.csv"))
 
 
-def clean_SubjectivePoverty():
+def clean_SubjectivePoverty(output_filename="train_SubjectivePoverty_clean.csv"):
     SubjectivePoverty = pd.read_csv(os.path.join(RAW_DATA_DIR, "train_SubjectivePoverty.csv"))
     subjective_poverty_columns = [f'subjective_poverty_{i}' for i in range(1, 11)]
     SubjectivePoverty['subjectivePoverty_rating'] = SubjectivePoverty[subjective_poverty_columns].idxmax(axis=1).str.extract('(\d+)').astype(int)
     Ratings = SubjectivePoverty[['psu_hh_idcode', 'subjectivePoverty_rating']]
 
     # output
-    Ratings.to_csv(os.path.join(CLEAN_DATA_DIR, "train_SubjectivePoverty_clean.csv"))
+    Ratings.to_csv(os.path.join(CLEAN_DATA_DIR, output_filename))
 
 def merge_clean_datasets():
     pass
+
+
+
 
 if __name__ == '__main__':
     clean_Education()
     clean_HouseholdInfo()
     clean_SubjectivePoverty()
+    
