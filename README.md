@@ -1,9 +1,9 @@
 # STAT 441 Kaggle Project 
 
 ## Deadlines:
-- Thurs, Nov.21: Predictions
-- Sat, Nov.23: Video Presentation
-- Tues, Nov.26: Peer Review
+- *Thurs, Nov.21*: Predictions
+- *Sat, Nov.23*: Video Presentation
+- *Tues, Nov.26*: Peer Review
 
 ## Progress:
 1. Data Preprocessing
