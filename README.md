@@ -21,3 +21,6 @@
   - binary response => 1과0으로 바꿈
   - 서로 correlation 높은 애들중 한개 남기고 버림 (이 단계 아직 해야됨)
   - EDA 할때 얘네로 하는것 권장
+
+
+Notion Page for Notes: https://www.notion.so/441-Kaggle-Project-13f1690069ae80e38347ec3fc74cb786
