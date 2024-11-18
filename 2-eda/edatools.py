@@ -24,7 +24,7 @@ def correlation_bar_graph(data, y_col='subjectivePoverty_rating', fig_size=(20, 
     # Example: correlations = merged_df.corr()['rating'].sort_values(ascending=False)
     cols = [col for col in data.columns if col not in x_cols_to_exclude]
     correlations = data[cols].corr()[y_col].abs().sort_values(ascending=False)
-    correlations = correlations[correlations.index != 'subjectivePoverty_rating']
+    correlations = correlations[correlations.index != y_col]
 
     # Plot a bar graph
     plt.figure(figsize=fig_size)
