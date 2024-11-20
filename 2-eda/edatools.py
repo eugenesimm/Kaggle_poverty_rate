@@ -38,3 +38,14 @@ def correlation_bar_graph(data, y_col='subjectivePoverty_rating', fig_size=(20, 
 
     # Show the plot
     plt.show()
+
+def density_plot(data):
+
+    # Plot the histogram
+    plt.figure(figsize=(8, 6))
+    plt.hist(data, bins=20, density=True, edgecolor='k', alpha=0.7)
+    plt.title('Density Histogram Data')
+    plt.xlabel('Values')
+    plt.ylabel('Density')
+    plt.grid(True)
+    plt.show()
