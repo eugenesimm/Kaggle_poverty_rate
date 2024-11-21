@@ -1,4 +1,4 @@
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -58,31 +58,59 @@ def generate_best_XGB_model(train_data):
 
     X_train = train_data.drop(columns=['psu_hh_idcode', 'subjectivePoverty_rating'], axis='columns')
     y_train = train_data['subjectivePoverty_rating'] - 1
+
     param_grid = {
-    'learning_rate': [0.01, 0.05, 0.1],
-    'max_depth': [1, 3, 5, 7],
-    'n_estimators': [50, 100, 200, 300],
-    'subsample': [0.3, 0.5, 0.7, 0.9],
-    'colsample_bytree': [0.4, 0.6, 0.8]
+    'learning_rate': [0.05, 0.1, 0.2],
+    'max_depth': [3, 5, 7],
+    'min_child_weight': [1, 5],
+    'n_estimators': [100, 200],
+    'subsample': [0.7, 0.9],
+    'colsample_bytree': [0.6, 0.8],
+    'gamma': [0, 0.1, 0.3],
+    'reg_alpha': [0, 0.1, 0.5],
+    'reg_lambda': [1, 5]
     }
 
-    # Create the XGBoost model
-    xgb_model = xgb.XGBClassifier(objective='multi:softprob', eval_metric='mlogloss', random_state=101)
 
-    grid_search = GridSearchCV(
-        estimator=xgb_model,
-        param_grid=param_grid,
-        scoring='neg_log_loss',  # Use log loss as the evaluation metric
-        cv=5,                    
-        verbose=1,               
-        n_jobs=-1                
+    # Create the XGBoost model
+    xgb_model = xgb.XGBClassifier(
+        objective='multi:softprob', 
+        eval_metric='mlogloss',
+        use_label_encoder=False, 
+        random_state=42
     )
 
-    grid_search.fit(X_train, y_train)
-    print("Best Parameters:", grid_search.best_params_)
-    print("Best Log Loss Score:", -grid_search.best_score_)
+    # grid_search = GridSearchCV(
+    #     estimator=xgb_model,
+    #     param_grid=param_grid,
+    #     scoring='neg_log_loss',  # Use log loss as the evaluation metric
+    #     cv=3,                    
+    #     verbose=1,               
+    #     n_jobs=-1                
+    # )
+    # print("Starting GridSearchCV...")
+    # grid_search.fit(X_train, y_train)
+    # print("GridSearchCV Completed...")
 
-    best_model_xgb = grid_search.best_estimator_
+    # best_model_xgb = grid_search.best_estimator_
+    # print("Best Parameters:", grid_search.best_params_)
+    # print("Best Log Loss Score:", -grid_search.best_score_)
+
+    random_search = RandomizedSearchCV(
+        estimator=xgb_model,
+        param_distributions=param_grid,
+        n_iter=100,  # Try 100 random combinations
+        scoring='neg_log_loss',
+        cv=3,
+        verbose=1,
+        n_jobs=-1
+    )
+    print("Starting RandomizedSearchCV...")
+    random_search.fit(X_train, y_train)
+    print("RandomizedSearchCV Completed...")
+    best_model_xgb = random_search.best_estimator_
+    print("Best Parameters:", random_search.best_params_)
+    print("Best Log Loss:", -random_search.best_score_)
     return best_model_xgb
 
 
@@ -121,7 +149,7 @@ def generate_best_SVM_model(train_data):
     print("Best Log Loss Score:", -optimal_params.best_score_)
     return best_model
 
-def build_nn_model(hp, n_features):
+def build_nn_model(hp):
     """
     Build a neural network model for hyperparameter tuning.
     Args:
@@ -130,7 +158,7 @@ def build_nn_model(hp, n_features):
         model: A compiled Keras Sequential model.
     """
     model = Sequential()
-    
+    n_features=39
     # Input layer
     model.add(Dense(units=hp.Int('units_1', min_value=32, max_value=256, step=32),
                     activation='relu',
