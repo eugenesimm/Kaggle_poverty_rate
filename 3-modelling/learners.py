@@ -91,8 +91,8 @@ def generate_best_SVM_model(train_data):
 
   
     # Scale the features
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X)
+    #scaler = StandardScaler()
+    #X_train_scaled = scaler.fit_transform(X)
     
    # GridSearch CV
     param_grid = {
@@ -104,7 +104,8 @@ def generate_best_SVM_model(train_data):
     optimal_params = GridSearchCV(SVC(probability=True, random_state=42), param_grid, n_jobs=-1, cv=5, scoring='neg_log_loss')
     
     # Fit the model
-    optimal_params.fit(X_train_scaled, y)
+    # optimal_params.fit(X_train_scaled, y)
+    optimal_params.fit(X, y)
     best_model = optimal_params.best_estimator_
     return best_model
 
