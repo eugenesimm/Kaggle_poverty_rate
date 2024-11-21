@@ -62,7 +62,6 @@ def generate_best_XGB_model(train_data):
     param_grid = {
     'learning_rate': [0.05, 0.1, 0.2],
     'max_depth': [3, 5, 7],
-    'min_child_weight': [1, 5],
     'n_estimators': [100, 200],
     'subsample': [0.7, 0.9],
     'colsample_bytree': [0.6, 0.8],
