@@ -117,8 +117,7 @@ def generate_best_XGB_model(train_A):
     'reg_lambda': [3, 5, 7]                # Moderate L2 regularization
     }
 
-
-    # Create the XGBoost model
+# Create the XGBoost model
     xgb_model = xgb.XGBClassifier(
         objective='multi:softprob', 
         eval_metric='mlogloss',
@@ -134,8 +133,30 @@ def generate_best_XGB_model(train_A):
         verbose=1,               
         n_jobs=-1                
     )
-    grid_search.fit(train_X, train_y)
-    best_xgb_model = grid_search.best_estimator_
+    print("Starting GridSearchCV...")
+    grid_search.fit(X_train, y_train)
+    print("GridSearchCV Completed...")
+
+    best_model_xgb = grid_search.best_estimator_
+    print("Best Parameters:", grid_search.best_params_)
+    print("Best Log Loss Score:", -grid_search.best_score_)
+
+    # random_search = RandomizedSearchCV(
+    #     estimator=xgb_model,
+    #     param_distributions=param_grid,
+    #     n_iter=50,  # Try 50 random combinations
+    #     scoring='neg_log_loss',
+    #     cv=2,
+    #     verbose=1,
+    #     n_jobs=-1
+    # )
+    # print("Starting RandomizedSearchCV...")
+    # random_search.fit(X_train, y_train)
+    # print("RandomizedSearchCV Completed...")
+    # best_model_xgb = random_search.best_estimator_
+    # print("Best Parameters:", random_search.best_params_)
+    # print("Best Log Loss:", -random_search.best_score_)
+    return best_model_xgb
 
     # Log best parameters and uncalibrated log-loss
     print("Best Parameters:", grid_search.best_params_)
