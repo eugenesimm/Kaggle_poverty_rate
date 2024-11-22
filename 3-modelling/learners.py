@@ -2,72 +2,119 @@ from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSe
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.calibration import CalibratedClassifierCV
+
 from sklearn.svm import SVC
 from sklearn.metrics import log_loss
 import xgboost as xgb
 import pandas as pd
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import to_categorical
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-import keras_tuner as kt
-
 
 def generate_best_RF_model(train_A):
-    X = X_train = train_A.drop(columns=['psu_hh_idcode', 'subjectivePoverty_rating'], axis='columns')
+    X = train_A.drop(columns=['psu_hh_idcode', 'subjectivePoverty_rating'], axis='columns')
     y = train_A['subjectivePoverty_rating']
-    
+
+    train_X, calib_X, train_y, calib_y = train_test_split(X, y, stratify=train_A['subjectivePoverty_rating'], test_size=0.2, random_state=42)
+
     # Define the parameter grid
     params = {
-        'n_estimators': [200, 300, 500],
-        'max_features': ['sqrt', 'log2'],
-        'max_depth': [4, 5, 6, 7],
-        'min_samples_split': [2, 5, 50],
-        'min_samples_leaf': [35, 42, 50],
+    'n_estimators': [100, 150, 200, 250],
+    'max_features': ['sqrt', 'log2'],
+    'max_depth': [10, 12, 15, 18, 20],
+    'min_samples_split': [2, 8, 10, 12],
+    'min_samples_leaf': [10, 15, 20, 30],
     }
-
-    # Create the scorer
-    # log_loss_scorer = make_scorer(log_loss, greater_is_better=False, needs_proba=True)
 
     # Initialize GridSearchCV
     grid_search = GridSearchCV(
-        estimator=RandomForestClassifier(),
+        estimator=RandomForestClassifier(random_state=42),
         param_grid=params,
         scoring='neg_log_loss',
-        cv=5,
+        cv=3,
         verbose=1,
         n_jobs=-1,
         return_train_score=True
     )
 
-    # Fit the grid search
-    grid_search.fit(X, y)
-    best_model = grid_search.best_estimator_
+    grid_search.fit(train_X, train_y)
+    best_rf_model = grid_search.best_estimator_
 
+    # Log best parameters and uncalibrated log-loss
     print("Best Parameters:", grid_search.best_params_)
-    print("Best Log Loss Score:", -grid_search.best_score_)
+    print("Best Log Loss Score (Uncalibrated):", -grid_search.best_score_)
+
+    # Calibrate the model on the holdout set
+    print("Calibrating the Random Forest for better probabilities...")
+    calibrated_rf_model = CalibratedClassifierCV(best_rf_model, method='isotonic', cv='prefit')
+    calibrated_rf_model.fit(calib_X, calib_y)
+
+    # Evaluate calibrated log-loss on calibration set
+    calib_probas = calibrated_rf_model.predict_proba(calib_X)
+    calib_loss = log_loss(calib_y, calib_probas)
+    print("Calibrated Log Loss Score (on Calibration Set):", calib_loss)
+
+    # Return the calibrated model
+    return calibrated_rf_model
+
+
+# def generate_best_RF_model(train_A):
+#     from sklearn.ensemble import RandomForestClassifier
+#     from sklearn.model_selection import RandomizedSearchCV
+#     from sklearn.preprocessing import StandardScaler
     
-    # Return the best model
-    return best_model
+#     # Prepare data
+#     X = train_A.drop(columns=['psu_hh_idcode', 'subjectivePoverty_rating'], axis='columns')
+#     y = train_A['subjectivePoverty_rating']
+#     X_scaled = StandardScaler().fit_transform(X)
+    
+#     # Define parameter grid
+#     params = {
+#         'n_estimators': [200, 300, 500, 700],
+#         'max_features': ['sqrt', 'log2', 0.2, 0.5],
+#         'max_depth': [5, 10, 15],
+#         'min_samples_split': [2, 10, 50],
+#         'min_samples_leaf': [20, 30, 50, 70],
+#         'bootstrap': [True, False]
+#     }
+
+#     # Initialize RandomizedSearchCV
+#     random_search = RandomizedSearchCV(
+#         estimator=RandomForestClassifier(class_weight='balanced'),
+#         param_distributions=params,
+#         n_iter=50,  # Randomly sample 50 combinations
+#         scoring='neg_log_loss',
+#         cv=5,
+#         verbose=1,
+#         n_jobs=-1,
+#         return_train_score=True
+#     )
+
+#     # Fit the randomized search
+#     random_search.fit(X_scaled, y)
+#     best_model = random_search.best_estimator_
+
+#     print("Best Parameters:", random_search.best_params_)
+#     print("Best Log Loss Score:", -random_search.best_score_)
+    
+#     return best_model
 
 
-def generate_best_XGB_model(train_data):
+def generate_best_XGB_model(train_A):
 
-    X_train = train_data.drop(columns=['psu_hh_idcode', 'subjectivePoverty_rating'], axis='columns')
-    y_train = train_data['subjectivePoverty_rating'] - 1
+    X = train_A.drop(columns=['psu_hh_idcode', 'subjectivePoverty_rating'], axis='columns')
+    y = train_A['subjectivePoverty_rating'] - 1
+
+    train_X, calib_X, train_y, calib_y = train_test_split(X, y, stratify=train_A['subjectivePoverty_rating'], test_size=0.2, random_state=42)
+
 
     param_grid = {
-    'learning_rate': [0.05, 0.1, 0.2],
-    'max_depth': [3, 5, 7],
-    'n_estimators': [100, 200],
-    'subsample': [0.7, 0.9],
-    'colsample_bytree': [0.6, 0.8],
-    'gamma': [0, 0.1, 0.3],
-    'reg_alpha': [0, 0.1, 0.5],
-    'reg_lambda': [1, 5]
+    'learning_rate': [0.05, 0.1],        # Limit choices to the most common values
+    'max_depth': [3, 5, 7],                # Focus on shallower trees for faster training
+    'n_estimators': [100, 200, 250],         # Limit boosting rounds for quicker training
+    'subsample': [0.7, 0.9],            # Common subsampling rates
+    'colsample_bytree': [0.6, 0.8],     # Feature sampling
+    'reg_alpha': [0, 0.1, 0.2],              # Light regularization
+    'reg_lambda': [3, 5, 7]                # Moderate L2 regularization
     }
 
 
@@ -79,39 +126,34 @@ def generate_best_XGB_model(train_data):
         random_state=42
     )
 
-    # grid_search = GridSearchCV(
-    #     estimator=xgb_model,
-    #     param_grid=param_grid,
-    #     scoring='neg_log_loss',  # Use log loss as the evaluation metric
-    #     cv=3,                    
-    #     verbose=1,               
-    #     n_jobs=-1                
-    # )
-    # print("Starting GridSearchCV...")
-    # grid_search.fit(X_train, y_train)
-    # print("GridSearchCV Completed...")
-
-    # best_model_xgb = grid_search.best_estimator_
-    # print("Best Parameters:", grid_search.best_params_)
-    # print("Best Log Loss Score:", -grid_search.best_score_)
-
-    random_search = RandomizedSearchCV(
+    grid_search = GridSearchCV(
         estimator=xgb_model,
-        param_distributions=param_grid,
-        n_iter=100,  # Try 100 random combinations
-        scoring='neg_log_loss',
-        cv=3,
-        verbose=1,
-        n_jobs=-1
+        param_grid=param_grid,
+        scoring='neg_log_loss',  # Use log loss as the evaluation metric
+        cv=3,                    
+        verbose=1,               
+        n_jobs=-1                
     )
-    print("Starting RandomizedSearchCV...")
-    random_search.fit(X_train, y_train)
-    print("RandomizedSearchCV Completed...")
-    best_model_xgb = random_search.best_estimator_
-    print("Best Parameters:", random_search.best_params_)
-    print("Best Log Loss:", -random_search.best_score_)
-    return best_model_xgb
+    grid_search.fit(train_X, train_y)
+    best_xgb_model = grid_search.best_estimator_
 
+    # Log best parameters and uncalibrated log-loss
+    print("Best Parameters:", grid_search.best_params_)
+    print("Best Log Loss Score (Uncalibrated):", -grid_search.best_score_)
+
+    # Calibrate the model on the calibration set
+    print("Calibrating the XGBoost model for better probabilities...")
+    calibrated_xgb_model = CalibratedClassifierCV(best_xgb_model, method='sigmoid', cv='prefit')
+    calibrated_xgb_model.fit(calib_X, calib_y)
+
+    # Evaluate calibrated log-loss on calibration set
+    calib_probas = calibrated_xgb_model.predict_proba(calib_X)
+    calib_loss = log_loss(calib_y, calib_probas)
+    print("Calibrated Log Loss Score (on Calibration Set):", calib_loss)
+
+
+    # Return the calibrated model
+    return calibrated_xgb_model
 
 
 def generate_best_SVM_model(train_data):
@@ -147,103 +189,6 @@ def generate_best_SVM_model(train_data):
     print("Best Parameters:", optimal_params.best_params_)
     print("Best Log Loss Score:", -optimal_params.best_score_)
     return best_model
-
-def build_nn_model(hp):
-    """
-    Build a neural network model for hyperparameter tuning.
-    Args:
-        hp: Hyperparameter object from KerasTuner.
-    Returns:
-        model: A compiled Keras Sequential model.
-    """
-    model = Sequential()
-    n_features=39
-    # Input layer
-    model.add(Dense(units=hp.Int('units_1', min_value=32, max_value=256, step=32),
-                    activation='relu',
-                    input_shape=(n_features,)))
-    model.add(Dropout(rate=hp.Float('dropout_1', min_value=0.1, max_value=0.5, step=0.1)))
-    
-    # Hidden layer
-    model.add(Dense(units=hp.Int('units_2', min_value=32, max_value=128, step=32),
-                    activation='relu'))
-    model.add(Dropout(rate=hp.Float('dropout_2', min_value=0.1, max_value=0.5, step=0.1)))
-    
-    # Output layer
-    model.add(Dense(10, activation='softmax'))  # 10 classes
-
-    # Compile the model
-    model.compile(
-        optimizer=Adam(learning_rate=hp.Choice('learning_rate', values=[0.001, 0.01, 0.1])),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
-    
-    return model
-
-def generate_best_NN_model(train_data):
-    """
-    Generate the best neural network model using KerasTuner for hyperparameter tuning.
-    Args:
-        train_data (DataFrame): Training data with features and target variable.
-    Returns:
-        best_model_nn: Trained neural network model with best parameters.
-    """
-    # Preprocess training data
-    X_train = train_data.drop(columns=['psu_hh_idcode', 'subjectivePoverty_rating'], axis='columns').values
-    y_train = train_data['subjectivePoverty_rating'].values
-
-    # Standardize features
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-
-    # One-hot encode the target
-    y_train_one_hot = to_categorical(y_train - 1)  # Adjust target to 0-indexed for categorical encoding
-
-    # Split for validation
-    X_train_split, X_val, y_train_split, y_val = train_test_split(
-        X_train, y_train_one_hot, test_size=0.2, random_state=42, stratify=y_train
-    )
-
-    # Initialize Keras Tuner
-    tuner = kt.Hyperband(
-        build_nn_model,
-        objective='val_loss',  # Optimize for log loss
-        max_epochs=50,
-        factor=3,
-        directory='kt_hyperband',  # Directory for storing tuning logs
-        project_name='nn_hyperparam_tuning'
-    )
-
-    # Perform hyperparameter search
-    tuner.search(X_train_split, y_train_split,
-                 validation_data=(X_val, y_val),
-                 epochs=50,
-                 batch_size=32,
-                 verbose=1)
-
-    # Get the best model
-    best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-    print("Best Hyperparameters:")
-    print(f"  Units Layer 1: {best_hps.get('units_1')}")
-    print(f"  Dropout Layer 1: {best_hps.get('dropout_1')}")
-    print(f"  Units Layer 2: {best_hps.get('units_2')}")
-    print(f"  Dropout Layer 2: {best_hps.get('dropout_2')}")
-    print(f"  Learning Rate: {best_hps.get('learning_rate')}")
-
-    # Train the best model
-    best_model_nn = tuner.hypermodel.build(best_hps)
-    best_model_nn.fit(X_train_split, y_train_split,
-                      validation_data=(X_val, y_val),
-                      epochs=50,
-                      batch_size=32,
-                      verbose=1)
-
-    # Evaluate the best model
-    val_loss, val_accuracy = best_model_nn.evaluate(X_val, y_val, verbose=0)
-    print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}")
-
-    return best_model_nn
 
 def predict_ratings_RF(model, train_B_X):
     test_ids = train_B_X['psu_hh_idcode']
@@ -291,12 +236,11 @@ def encode_filler(data):
   filled_data = data[na_col]
   return filled_data
 
+
 def predict_ratings_SVM(model, train_B_X):
     test_ids = train_B_X['psu_hh_idcode']
-    train_B_X = encoder(train_B_X)
-    train_B_X = encode_filler(train_B_X)
     preds_proba = model.predict_proba(train_B_X)
+    # print(log_loss(train_B['subjectivePoverty_rating'], preds_proba))
     output_df = pd.DataFrame(preds_proba, columns=[f'subjective_poverty{i+1}' for i in range(preds_proba.shape[1])])
     output_df.insert(0, 'psu_hh_idcode', test_ids.values)  # Insert the ID column at the start
     return output_df
-
