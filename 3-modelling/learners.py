@@ -60,18 +60,18 @@ def generate_best_XGB_model(train_data):
     y_train = train_data['subjectivePoverty_rating'] - 1
 
     param_grid = {
-    'learning_rate': [0.05, 0.1, 0.2],
-    'max_depth': [3, 5, 7],
-    'n_estimators': [100, 200],
-    'subsample': [0.7, 0.9],
-    'colsample_bytree': [0.6, 0.8],
-    'gamma': [0, 0.1, 0.3],
-    'reg_alpha': [0, 0.1, 0.5],
-    'reg_lambda': [1, 5]
+        'learning_rate': [0.01, 0.03],
+        'max_depth': [1, 3],
+        'n_estimators': [300, 1000],
+        'subsample': [0.01, 0.5],
+        'colsample_bytree': [1, 0.8],
+        'colsample_bylevel': [1, 0.8],
+        'gamma': [0],
+        'reg_alpha': [0.1, 0.8],
+        'reg_lambda': [1, 5]
     }
 
-
-    # Create the XGBoost model
+# Create the XGBoost model
     xgb_model = xgb.XGBClassifier(
         objective='multi:softprob', 
         eval_metric='mlogloss',
@@ -79,37 +79,37 @@ def generate_best_XGB_model(train_data):
         random_state=42
     )
 
-    # grid_search = GridSearchCV(
-    #     estimator=xgb_model,
-    #     param_grid=param_grid,
-    #     scoring='neg_log_loss',  # Use log loss as the evaluation metric
-    #     cv=3,                    
-    #     verbose=1,               
-    #     n_jobs=-1                
-    # )
-    # print("Starting GridSearchCV...")
-    # grid_search.fit(X_train, y_train)
-    # print("GridSearchCV Completed...")
-
-    # best_model_xgb = grid_search.best_estimator_
-    # print("Best Parameters:", grid_search.best_params_)
-    # print("Best Log Loss Score:", -grid_search.best_score_)
-
-    random_search = RandomizedSearchCV(
+    grid_search = GridSearchCV(
         estimator=xgb_model,
-        param_distributions=param_grid,
-        n_iter=100,  # Try 100 random combinations
-        scoring='neg_log_loss',
-        cv=3,
-        verbose=1,
-        n_jobs=-1
+        param_grid=param_grid,
+        scoring='neg_log_loss',  # Use log loss as the evaluation metric
+        cv=3,                    
+        verbose=1,               
+        n_jobs=-1                
     )
-    print("Starting RandomizedSearchCV...")
-    random_search.fit(X_train, y_train)
-    print("RandomizedSearchCV Completed...")
-    best_model_xgb = random_search.best_estimator_
-    print("Best Parameters:", random_search.best_params_)
-    print("Best Log Loss:", -random_search.best_score_)
+    print("Starting GridSearchCV...")
+    grid_search.fit(X_train, y_train)
+    print("GridSearchCV Completed...")
+
+    best_model_xgb = grid_search.best_estimator_
+    print("Best Parameters:", grid_search.best_params_)
+    print("Best Log Loss Score:", -grid_search.best_score_)
+
+    # random_search = RandomizedSearchCV(
+    #     estimator=xgb_model,
+    #     param_distributions=param_grid,
+    #     n_iter=50,  # Try 50 random combinations
+    #     scoring='neg_log_loss',
+    #     cv=2,
+    #     verbose=1,
+    #     n_jobs=-1
+    # )
+    # print("Starting RandomizedSearchCV...")
+    # random_search.fit(X_train, y_train)
+    # print("RandomizedSearchCV Completed...")
+    # best_model_xgb = random_search.best_estimator_
+    # print("Best Parameters:", random_search.best_params_)
+    # print("Best Log Loss:", -random_search.best_score_)
     return best_model_xgb
 
 
